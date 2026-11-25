@@ -1,0 +1,245 @@
+/* ========================================
+   whip_afk — html/afk.css
+
+   Over the camera while a player is away (client/afk_showroom.lua, js/afk.js): thin cinema bars that slide in, a
+   small card bottom left (the make's logo, the model, the plate, how long they have been away; on foot their name and
+   where they are), the car's numbers and a hint bottom right, a soft vignette and a fine grain, and the fade through
+   black over each cut.
+
+   Sized off the screen's height, so it reads the same at every resolution. whip's look: its tokens copied here (our
+   own page cannot read whip_core's cascade), its typefaces from whip_core (index.html). 2022-safe CSS only (CEF is
+   Chromium 103).
+   ======================================== */
+
+:root {
+    --ui-font: 'Barlow', 'Segoe UI', sans-serif;
+    --ui-text: rgba(255, 255, 255, 0.93);
+    --ui-text-mid: rgba(255, 255, 255, 0.5);
+    --ui-surface-raised: rgba(10, 12, 18, 0.9);
+    --ui-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --ui-shadow-text: 0 1px 6px rgba(0, 0, 0, 0.8);
+    --ui-radius-pop: 12px;
+    --ui-radius-xs: 4px;
+    --ui-radius-hair: 2px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
+
+#afk-show {
+    --afk-bar: 7.5vh;
+    --afk-type: 2.2vh;
+
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    /* Over the HUD (hidden by the clean screen anyway), under the curtain (9500) and the death screen. */
+    z-index: 890;
+    visibility: hidden;
+    transition: visibility 0s linear 0.6s;
+    font-family: var(--ui-font);
+    color: var(--ui-text);
+}
+#afk-show.on { visibility: visible; transition: none; }
+
+/* ---- the bars ---- */
+
+.afk-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: var(--afk-bar);
+    background: #000;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.afk-bar.top    { top: 0;    transform: translateY(-100%); }
+.afk-bar.bottom { bottom: 0; transform: translateY(100%); }
+#afk-show.on .afk-bar { transform: none; transition-duration: 1.4s; }
+
+/* ---- the card (left) and the numbers with the hint (right), sitting on the bottom bar ---- */
+
+.afk-card, .afk-side {
+    position: absolute;
+    bottom: calc(var(--afk-bar) + 2.4vh);
+    opacity: 0;
+    transform: translateY(1vh);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    text-shadow: var(--ui-shadow-text);
+}
+#afk-show.on .afk-card, #afk-show.on .afk-side {
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.9s ease 1.6s, transform 0.9s ease 1.6s;
+}
+
+.afk-card {
+    left: 4vw;
+    display: flex;
+    align-items: center;
+    gap: 1.6vh;
+}
+.afk-logo {
+    width: 6.4vh;
+    height: 6.4vh;
+    object-fit: contain;
+    filter: drop-shadow(0 0 0.4vh rgba(0, 0, 0, 0.6));
+}
+.afk-logo[hidden] { display: none; }
+.afk-lines { display: flex; flex-direction: column; gap: 0.5vh; }
+.afk-make {
+    font-size: calc(var(--afk-type) * 0.75);
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ui-text-mid);
+}
+.afk-model {
+    font-size: calc(var(--afk-type) * 1.6);
+    font-weight: 700;
+    line-height: 1;
+}
+.afk-row {
+    display: flex;
+    align-items: center;
+    gap: 1.2vh;
+    font-size: var(--afk-type);
+    font-variant-numeric: tabular-nums;
+}
+.afk-plate {
+    padding: 0.2vh 0.9vh;
+    border: 0.15vh solid rgba(255, 255, 255, 0.55);
+    border-radius: var(--ui-radius-xs);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+}
+.afk-plate[hidden] { display: none; }
+.afk-away { color: var(--ui-text-mid); }
+
+.afk-side {
+    right: 4vw;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2vh;
+}
+.afk-hint {
+    font-size: calc(var(--afk-type) * 0.8);
+    letter-spacing: 0.08em;
+    color: var(--ui-text-mid);
+}
+
+/* ---- the numbers: bars against the best of the class, growing in one after another ---- */
+
+.afk-stats { width: 28vh; display: flex; flex-direction: column; gap: 1vh; }
+.afk-stats[hidden] { display: none; }
+.afk-class {
+    font-size: calc(var(--afk-type) * 0.7);
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ui-text-mid);
+}
+.afk-rows { display: flex; flex-direction: column; gap: 0.9vh; }
+.afk-stat-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: calc(var(--afk-type) * 0.75);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 0.4vh;
+}
+.afk-stat-bar {
+    height: 0.45vh;
+    border-radius: var(--ui-radius-hair);
+    background: rgba(255, 255, 255, 0.18);
+    overflow: hidden;
+}
+.afk-stat-fill {
+    height: 100%;
+    background: var(--ui-text);
+    transform-origin: left center;
+    transform: scaleX(0);
+    transition: transform 1.2s cubic-bezier(0.2, 0, 0.1, 1);
+}
+#afk-show.on .afk-stat-fill { transform: scaleX(var(--share)); }
+
+/* ---- the film: a soft vignette and a fine grain, faded in with the bars ---- */
+
+.afk-vignette, .afk-grain {
+    position: absolute;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+.afk-vignette {
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.5) 100%);
+}
+/* The grain: a noise tile on a layer bigger than the screen, jumping about a few times a second (a transform,
+   so the browser only moves it, never repaints it). */
+.afk-grain {
+    inset: -50%;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size: 180px 180px;
+    filter: grayscale(1);
+}
+#afk-show.on .afk-vignette { opacity: 1; transition-duration: 1.6s; }
+#afk-show.on .afk-grain { opacity: 0.07; transition-duration: 1.6s; animation: afk-grain 0.5s steps(1) infinite; }
+@keyframes afk-grain {
+    0%   { transform: translate(0, 0); }
+    20%  { transform: translate(-6%, 4%); }
+    40%  { transform: translate(5%, -7%); }
+    60%  { transform: translate(-3%, -4%); }
+    80%  { transform: translate(7%, 6%); }
+    100% { transform: translate(0, 0); }
+}
+
+/* ---- welcome back: a small card at the top, the showroom's photo as a print, for a few seconds ---- */
+
+#afk-back {
+    position: fixed;
+    top: 6vh;
+    left: 50%;
+    z-index: 880;
+    display: flex;
+    align-items: center;
+    gap: 1.6vh;
+    padding: 1.2vh 2vh 1.2vh 1.2vh;
+    border-radius: var(--ui-radius-pop);
+    background: var(--ui-surface-raised);
+    box-shadow: var(--ui-shadow-lg);
+    font-family: var(--ui-font);
+    color: var(--ui-text);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -1.5vh);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+#afk-back.on { opacity: 1; transform: translate(-50%, 0); transition-duration: 0.6s; }
+.afk-back-photo {
+    width: 16vh;
+    height: 9vh;
+    object-fit: cover;
+    border: 0.4vh solid #f4f1ea;
+    border-radius: var(--ui-radius-xs);
+    transform: rotate(-2deg);
+    box-shadow: 0 0.6vh 1.6vh rgba(0, 0, 0, 0.5);
+}
+.afk-back-photo[hidden] { display: none; }
+.afk-back-title { font-size: 2.2vh; font-weight: 700; }
+.afk-back-away { font-size: 1.6vh; color: var(--ui-text-mid); font-variant-numeric: tabular-nums; margin-top: 0.3vh; }
+
+/* ---- the fade over a cut: started DIP_LEAD_MS (820) before it (client/afk_showroom.lua). Out over 700 ms, black
+   from 700 to 950 ms (the cut falls in there, with a frame or two of the message's way here to spare), up again over
+   900 ms: slower up than down, so each shot arrives gently ---- */
+
+.afk-dip {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+}
+.afk-dip.go { animation: afk-dip 1.85s linear; }
+@keyframes afk-dip {
+    0%     { opacity: 0; animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); }
+    37.8%  { opacity: 1; }
+    51.4%  { opacity: 1; animation-timing-function: cubic-bezier(0.25, 0, 0.35, 1); }
+    100%   { opacity: 0; }
+}

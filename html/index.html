@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>whip_afk</title>
+<link rel="stylesheet" href="nui://whip_core/html/css/fonts.css"> <!-- whip's typefaces -->
+<link rel="stylesheet" href="afk.css">
+</head>
+<body>
+
+<!-- The showroom (client/showroom.lua → afk.js): thin bars, the car's make, model, plate and numbers (on foot the
+     player's name and where they are), how long they have been away, a vignette and grain, and the fade over each cut. -->
+<div id="afk-show" aria-hidden="true">
+    <div class="afk-vignette"></div><div class="afk-grain"></div>
+    <div class="afk-bar top"></div><div class="afk-bar bottom"></div>
+    <div class="afk-card">
+        <img class="afk-logo" alt="" hidden>
+        <div class="afk-lines">
+            <div class="afk-make"></div>
+            <div class="afk-model"></div>
+            <div class="afk-row"><span class="afk-plate"></span><span class="afk-away">AFK · <span class="afk-time">0:00</span></span></div>
+        </div>
+    </div>
+    <div class="afk-side">
+        <div class="afk-stats" hidden><div class="afk-class"></div><div class="afk-rows"></div></div>
+        <div class="afk-hint">Any key to return</div>
+    </div>
+    <div class="afk-dip"></div>
+</div>
+
+<!-- Welcome back (client/main.lua → afk.js): how long the player was away, and the showroom's photo. -->
+<div id="afk-back" aria-hidden="true">
+    <img class="afk-back-photo" alt="" hidden>
+    <div class="afk-back-text"><div class="afk-back-title">Welcome back</div><div class="afk-back-away"></div></div>
+</div>
+
+<script src="afk.js"></script>
+</body>
+</html>

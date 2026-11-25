@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>afk tags</title>
+<link rel="stylesheet" href="nui://whip_core/html/css/fonts.css"> <!-- whip's typefaces -->
+<style>
+/* ============================================================================
+   THE AFK TAG ATLAS — one cell per player away who is near (client/tags.lua).
+
+   A DUI texture drawn as one quad per cell, anchored at the cell's bottom-centre above the player's head, in the
+   look of whip's /me capsule (whip_core's html/bubble3d): the same glass, the same radius, a dot under it, or a
+   line down through the roof when they sit in a vehicle. Lua says what each cell reads; the page unfolds the
+   capsule to it, changes it in place, and folds it away. CEF 103: no :has, no color-mix.
+   ============================================================================ */
+
+:root {
+    --ui-surface: rgba(10, 12, 18, 0.75);
+    --ui-border:  rgba(255, 255, 255, 0.08);
+    --ui-text:    rgba(255, 255, 255, 0.93);
+    --ui-dim:     rgba(255, 255, 255, 0.55);
+    --ui-shadow-text: 0 1px 6px rgba(0, 0, 0, 0.8);
+    --ui-ease:    cubic-bezier(0.16, 1, 0.3, 1);
+    --cap-h: 67px;
+    --pad-x: 28px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: transparent; overflow: hidden; font-family: 'Barlow', 'Segoe UI', sans-serif; }
+
+.cell { position: absolute; left: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+
+.cap {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    width: var(--cap-h); height: var(--cap-h);
+    overflow: hidden;
+    background: var(--ui-surface);
+    border-radius: 38px;
+    border: 2px solid var(--ui-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transform: scale(0.4); opacity: 0;
+    transition: width 0.4s var(--ui-ease), transform 0.25s var(--ui-ease), opacity 0.2s ease;
+}
+.cell.in .cap { transform: none; opacity: 1; }
+.cap::before {
+    content: ''; position: absolute; top: 0; left: 16%; right: 16%; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.txt {
+    flex: 0 0 auto; white-space: nowrap;
+    font-size: 30px; font-weight: 500; line-height: 40px;
+    color: var(--ui-text); text-shadow: var(--ui-shadow-text);
+    opacity: 0; transition: opacity 0.15s ease;
+}
+.txt b { font-weight: 700; letter-spacing: 0.06em; }
+.txt span { color: var(--ui-dim); }
+.cap.open .txt { opacity: 1; transition: opacity 0.2s ease 0.2s; }
+
+.stalk-room {
+    flex: 0 0 auto; margin-top: 10px; height: 14px;
+    display: flex; justify-content: center; align-items: flex-end;
+    transition: height 0.3s var(--ui-ease);
+}
+.cell.long .stalk-room { height: var(--stalk-h); }
+.stalk {
+    width: 14px; height: 100%;
+    background: rgba(255, 255, 255, 0.9); border-radius: 7px;
+    box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.55), 0 0 6px rgba(0, 0, 0, 0.6);
+    transform: scale(0); transform-origin: 50% 100%;
+    transition: transform 0.25s var(--ui-ease), width 0.3s var(--ui-ease), border-radius 0.3s var(--ui-ease);
+}
+.cell.long .stalk { width: 4px; border-radius: 2px; }
+.cell.in .stalk { transform: none; }
+
+#measure { position: absolute; left: -10000px; top: 0; visibility: hidden; }
+#measure .txt { opacity: 1; display: inline-block; }
+</style>
+</head>
+<body>
+<div id="atlas"></div>
+<div id="measure"><div class="txt"></div></div>
+<script>
+(function () {
+    var q = new URLSearchParams(location.search);
+    var W = parseInt(q.get('w'), 10) || 768;
+    var H = parseInt(q.get('h'), 10) || 256;
+    var CELLS = parseInt(q.get('cells'), 10) || 6;
+    var STALK = parseInt(q.get('stalk'), 10) || 64;
+    document.documentElement.style.setProperty('--stalk-h', STALK + 'px');
+    document.body.style.width = W + 'px';
+    document.body.style.height = (H * CELLS) + 'px';
+
+    var atlas = document.getElementById('atlas');
+    var measureTxt = document.querySelector('#measure .txt');
+    var cells = [];
+    for (var i = 0; i < CELLS; i++) {
+        var cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.style.top = (i * H) + 'px';
+        cell.style.width = W + 'px';
+        cell.style.height = H + 'px';
+        var cap = document.createElement('div');
+        cap.className = 'cap';
+        var txt = document.createElement('div');
+        txt.className = 'txt';
+        cap.appendChild(txt);
+        var room = document.createElement('div');
+        room.className = 'stalk-room';
+        var stalk = document.createElement('div');
+        stalk.className = 'stalk';
+        room.appendChild(stalk);
+        cell.appendChild(cap);
+        cell.appendChild(room);
+        atlas.appendChild(cell);
+        cells.push({ el: cell, cap: cap, txt: txt, timer: 0, text: '' });
+    }
+
+    /** "AFK" bold, what follows dimmer: built from text nodes, never markup from Lua. */
+    function fill(el, text) {
+        el.textContent = '';
+        var at = text.indexOf(' · ');
+        var b = document.createElement('b');
+        b.textContent = at >= 0 ? text.slice(0, at) : text;
+        el.appendChild(b);
+        if (at >= 0) {
+            var s = document.createElement('span');
+            s.textContent = text.slice(at);
+            el.appendChild(s);
+        }
+    }
+
+    function widthFor(text) {
+        fill(measureTxt, text);
+        return Math.ceil(measureTxt.getBoundingClientRect().width) + 2 * 28 + 4;
+    }
+
+    function show(c, text) {
+        clearTimeout(c.timer);
+        if (c.text === text && c.el.classList.contains('in')) return;
+        var opening = !c.el.classList.contains('in');
+        c.text = text;
+        fill(c.txt, text);
+        var w = Math.min(W - 40, widthFor(text));
+        if (opening) {
+            c.cap.classList.remove('open');
+            c.cap.style.width = '';
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    c.el.classList.add('in');
+                    c.timer = setTimeout(function () { c.cap.style.width = w + 'px'; c.cap.classList.add('open'); }, 120);
+                });
+            });
+        } else {
+            c.cap.style.width = w + 'px';
+        }
+    }
+
+    function hide(c) {
+        clearTimeout(c.timer);
+        c.text = '';
+        c.cap.classList.remove('open');
+        c.timer = setTimeout(function () {
+            c.cap.style.width = '';
+            c.timer = setTimeout(function () { c.el.classList.remove('in'); c.el.classList.remove('long'); }, 350);
+        }, 150);
+    }
+
+    window.addEventListener('message', function (e) {
+        var d = e.data;
+        if (typeof d === 'string') { try { d = JSON.parse(d); } catch (err) { return; } }
+        if (!d || typeof d.cell !== 'number') return;
+        var c = cells[d.cell];
+        if (!c) return;
+        if (typeof d.long === 'boolean') c.el.classList.toggle('long', d.long);
+        if (typeof d.text === 'string') show(c, d.text);
+        if (d.hide) hide(c);
+    });
+})();
+</script>
+</body>
+</html>
